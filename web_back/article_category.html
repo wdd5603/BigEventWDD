@@ -32,7 +32,8 @@
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-center">
-                            <a href="#" class="btn btn-success" data-toggle="modal" data-target="#addModal">新增分类</a>
+                            <a href="#" class="btn btn-success" data-toggle="modal" data-target="#addModal"
+                                id="initAdd">新增分类</a>
                         </td>
                     </tr>
                 </tfoot>
@@ -55,7 +56,7 @@
                         </div>
                         <div class="form-group">
                             <label for="message-text" class="control-label">分类别名:</label>
-                            <input type="text" class="form-control" id="recipient-name">
+                            <input type="text" class="form-control" id="message-text">
                         </div>
                     </form>
                 </div>
@@ -66,6 +67,27 @@
             </div>
         </div>
     </div>
+    <!-- 系统信息弹框 -->
+    <div id="myModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">系统提示</h4>
+                </div>
+                <div class="modal-body">
+                    <p id="modalMsg">密码错误</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <!-- <button type="button" class="btn btn-primary">Save changes</button> -->
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
     <script src="./js/jquery-1.12.4.min.js"></script>
     <script src="js/bootstrap/js/bootstrap.min.js"></script>
     <script src="./js/template-web.js"></script>
@@ -75,32 +97,29 @@
             backdrop: false
         });
 
-        $('#model_shutoff').click(function() {
-            alert('shutoff');
+        $('#model_shutoff').click(function () {
             $('#addModal').modal('hide');
         });
+        //新增分类
+        $('#model_add').click(function () {
+            if ($('#model_add').text() === '保存修改') {
+                editCategroy();
+            } else if ($('#model_add').text() === '新增') {
+                addCategroy();
+            };
 
-        $('#model_add').click(function() {
-            alert('add');
-            $('#addModal').modal('hide');
         });
 
-        $('.category_table').delegate('a', 'click', function() {
-            if ($(this).hasClass('btn-info')) {
-                $('#addModal .modal-title').html('修改分类名称');
-                $('#addModal').modal('show');
-            }
-        })
-    </script>
 
-    <script>
-        //获取分类信息
-        $.getJSON('http://localhost:8000/admin/category_search', function(res) {
-            if (res.code === 200) {
-                $('#tbody').html(template('categoryTr', res));
-            }
 
-        })
+
+
+        // $('.category_table').delegate('a', 'click', function () {
+        //     if ($(this).hasClass('btn-info')) {
+        //         $('#addModal .modal-title').html('修改分类名称');
+        //         $('#addModal').modal('show');
+        //     }
+        // })
     </script>
 
     <script type="text/html" id="categoryTr">
@@ -109,12 +128,138 @@
             <td>{{item.name}}</td>
             <td>{{item.slug}}</td>
             <td class="text-center">
-                <a href="javascript:editTr({&quot;id&quot;:&quot;2&quot;,&quot;slug&quot;:&quot;funny&quot;,&quot;name&quot;:&quot;奇趣事&quot;});" class="btn btn-info btn-xs">编辑</a>
-                <a href="javascript:deleteTr( 2 );" class="btn btn-danger btn-xs">删除</a>
+                <!-- <a href="javascript:editTr({&quot;id&quot;:&quot;2&quot;,&quot;slug&quot;:&quot;funny&quot;,&quot;name&quot;:&quot;奇趣事&quot;});"
+                class="btn btn-info btn-xs">编辑</a> -->
+                <a href="javascript:;" data-index={{item}} class="edit btn btn-info btn-xs">编辑</a>
+                <a href="javascript:deleteTr({{item.id}});" class="btn btn-danger btn-xs">删除</a>
             </td>
         </tr>
         {{/each}}
     </script>
+    <script>
+        var editCategroyId;
+        //获取分类信息
+        function getCategory() {
+            $.getJSON('http://localhost:8000/admin/category_search', function (res) {
+                if (res.code === 200) {
+                    $('#tbody').html(template('categoryTr', {
+                        data: res.data
+                    }));
+                }
+            })
+        }
+        getCategory();
+
+
+        //删除单条分类
+        function deleteTr(id) {
+
+            $.post('http://localhost:8000/admin/category_delete', {
+                id: id
+            }, function (res) {
+
+                if (res.code === 200) {
+                    getCategory();
+
+                } else {
+                    $('#modalMsg').html(res.msg);
+                    $('#myModal').modal('show');
+                }
+            })
+        }
+
+        //编辑分类——弹出编辑框
+        $('#tbody').on('click', 'a.edit', function () {
+            var $obj = $.parseJSON($(this).attr('data-index'));
+            editCategroyId = $obj.id;
+            $('#addModal').modal('show');
+            // 修改对话框的标题
+            $('#addModal .modal-title').text('修改分类');
+            // 修改对话框的按钮
+            $('#model_add').text('保存修改');
+            // 将修改内容还原到输入框
+            $('#recipient-name').val($obj.name);
+            $('#message-text').val($obj.slug);
+
+        })
+
+        $('#initAdd').click(function () {
+            // 修改对话框的标题
+            $('#addModal .modal-title').text('新增分类');
+            // 修改对话框的按钮
+            $('#model_add').text('新增');
+            $('#recipient-name').val('');
+            $('#message-text').val('');
+        })
+        //新增分类
+        function addCategroy() {
+            //获取用户输入的分类名称
+            var $recipientName = $('#recipient-name').val();
+            //获取用户输入的分类别名
+            var $messageText = $('#message-text').val();
+            //输入内容不可为空
+
+            if ($messageText === '' || $recipientName === '') {
+                $('#modalMsg').html('内容不可为空');
+                $('#myModal').modal('show');
+                return;
+            }
+            $.post('http://localhost:8000/admin/category_add', {
+                name: $recipientName,
+                slug: $messageText
+
+            }, function (res) {
+                if (res.code === 200) {
+                    getCategory();
+                    $('#addModal').modal('hide');
+                    $('#recipient-name').val('');
+                    $('#message-text').val('');
+                } else if (res.code === 400) {
+                    $('#modalMsg').html($recipientName + '已存在');
+                    $('#myModal').modal('show');
+                } else {
+                    $('#modalMsg').html(res.msg);
+                    $('#myModal').modal('show');
+                }
+            })
+        }
+
+        // 编辑分类的保存方法
+        function editCategroy() {
+            //获取用户输入的分类名称
+            var $recipientName = $('#recipient-name').val();
+            //获取用户输入的分类别名
+            var $messageText = $('#message-text').val();
+            //输入内容不可为空
+
+            if ($messageText === '' || $recipientName === '') {
+                $('#modalMsg').html('内容不可为空');
+                $('#myModal').modal('show');
+                return;
+            }
+            $.post('http://localhost:8000/admin/category_edit', {
+                name: $recipientName,
+                slug: $messageText,
+                id: editCategroyId
+            }, function (res) {
+                if (res.code === 200) {
+                    getCategory();
+                    $('#addModal').modal('hide');
+                    $('#recipient-name').val('');
+                    $('#message-text').val('');
+
+                } else if (res.code === 400) {
+                    $('#modalMsg').html($recipientName + '已存在');
+                    $('#myModal').modal('show');
+                } else {
+                    $('#modalMsg').html(res.msg);
+                    $('#myModal').modal('show');
+                }
+            })
+        }
+    </script>
+
+
 
 </body>
 
